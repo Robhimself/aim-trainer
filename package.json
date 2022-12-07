@@ -1,0 +1,28 @@
+{
+  "name": "aim-trainer",
+  "version": "1.0.0",
+  "description": "This game used to be a minor task during one of my first weeks studying at Get Academy.\r The original instructions were: \"to have a view() function that draw 5x5 circles, and one \"lamp\" will light up and have an onclick function that calls the view() function and renders a new random lamp that lights up, etc etc.\r Then try to add a timer that can show the user how much time it took before the right lamp was clicked.\"",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Robhimself/aim-trainer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Robhimself/aim-trainer/issues"
+  },
+  "homepage": "https://github.com/Robhimself/aim-trainer#readme",
+  "devDependencies": {
+    "webpack": "^5.75.0",
+    "webpack-cli": "^5.0.0"
+  },
+  "dependencies": {
+    "firebase": "^9.14.0"
+  }
+}
