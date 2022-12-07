@@ -1,6 +1,6 @@
 //
 import { initializeApp } from "firebase/app";
-import { collection, onSnapshot, getFirestore, query, where, addDoc } from "firebase/firestore";
+import { collection, onSnapshot, getFirestore, query, where, addDoc, getDoc } from "firebase/firestore";
 import {
   getAuth,
   createUserWithEmailAndPassword,
@@ -25,17 +25,20 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+initializeApp(firebaseConfig);
+const auth = getAuth();
 const db = getFirestore();
 
 const colRef = collection(db, "scores");
+const userRef = collection(db, "users");
 
 // Model
 const game = {
   app: {
-    user: 123,
     view: "",
+    user: null,
+    username: "",
+    points: null,
   },
 
   input: {
@@ -49,57 +52,63 @@ const game = {
   },
 
   data: {
-    users: [
-      {
-        id: 123,
-        name: "Robert",
-        username: "Robhimself",
-        score: 0,
-      },
-      {
-        id: 124,
-        name: "Simen",
-        username: "dankert",
-        score: 10,
-      },
-      {
-        id: 125,
-        name: "David",
-        username: "David",
-        score: 50,
-      },
-    ],
+    users: [],
     scores: [],
   },
 };
 
 // get real time collection data
-const q = query(colRef, where("id", "==", game.app.user));
+
+const q = query(colRef);
 onSnapshot(q, (snapshot) => {
   let getScores = [];
   snapshot.docs.forEach((doc) => {
     getScores.push({ ...doc.data() });
   });
   game.data.scores = getScores;
-  console.log(game.data.scores);
+});
+
+const uq = query(userRef);
+onSnapshot(uq, (snapshot) => {
+  let getUsers = [];
+  snapshot.docs.forEach((user) => {
+    getUsers.push({ ...user.data() });
+  });
+  game.data.users = getUsers;
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      game.app.view = "game";
+      game.app.username = user.displayName;
+      let currentId = getUsers.filter((person) => person.username === game.app.username);
+      game.app.user = currentId[0].id;
+      updateView();
+    } else {
+      loginView();
+    }
+  });
 });
 
 // View
 
 function updateView() {
   const html = document.getElementById("app");
-  const view = game.app.view;
+  const nickname = game.app.username;
+  const result = drawResult();
+  const pts = userPoints();
+  const rank = userRank();
   html.innerHTML = "";
   html.innerHTML += /*HTML*/ `
   <div class="head">
+    <div style="display: flex; flex-direction: column; font-weight: bold;">
+    <div>Current Rank: ${rank}.</div>
+    <div>Total Points: ${pts}.</div>
+    </div>
     <div></div>
-    <div>Welcome to Aim Trainer, ${game.app.user}.</div>
-    <div>
-    <button class="change-name logout-btn">Change username?</button>
+    <div>Hello, <b>${nickname}</b> 
     <button class="logout logout-btn">Log out</button>
     </div>
   </div>
-  <h1>Aim Trainer v.0.9</h1>
+  <h1>Are you on the leaderboard yet?</h1>
   <div class="main-container">
     <div class="leaderboard">
       <div class="info-text">
@@ -113,23 +122,15 @@ function updateView() {
   ${`<div class="game">${createBoard()}</div>`}
   <div class="info">
   <div class="info-text">
-  Ett spill = 10 treff.
+  One round = 10 hits.
   </div>
   <div class="results">
-  ${game.input.roundTime.length == 10 ? drawResult() : ""}
+  ${result}
   </div>
   <div class="historic">
   ${userScores()}
   </div>
   </div>
-  </div>
-  <div class="modal">
-    <div class="modal-content">
-    <button class="namechange">Change it!</button>
-    <label for="username">Write your new username.</label>
-    <input type="text" name="new-name">
-    <button class="close-modal">Close</button>
-    </div>
   </div>
 `;
 
@@ -140,7 +141,6 @@ function updateView() {
   logoutButton.addEventListener("click", () => {
     signOut(auth)
       .then(() => {
-        console.log("the user signed out");
         logout();
       })
       .catch((err) => {
@@ -149,7 +149,6 @@ function updateView() {
   });
 }
 
-// loginView();
 function loginView() {
   const html = document.getElementById("app");
   const view = game.app.view;
@@ -157,7 +156,7 @@ function loginView() {
   html.innerHTML += /*HTML*/ `
   <div class="head">
   </div>
-  <h1>Getting started with firebase 9 now!</h1>
+  <h1>Welcome to a simple aim trainer!</h1>
   <div class="main-container">
     <div class="leaderboard"></div>
   
@@ -168,6 +167,25 @@ function loginView() {
   </div>
 `;
 
+  if (game.app.view === "signup") {
+    const signupForm = document.querySelector(".signup");
+    signupForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const auth = getAuth();
+      const email = signupForm.email.value;
+      const password = signupForm.password.value;
+      createUserWithEmailAndPassword(auth, email, password)
+        .then(() => {
+          game.input.username = signupForm.username.value;
+          setupUser();
+          signupForm.reset();
+        })
+        .catch((err) => {
+          console.log(err.message);
+        });
+    });
+  }
+
   //  logging in and out
 
   if (game.app.view === "") {
@@ -177,10 +195,7 @@ function loginView() {
       const email = loginForm.email.value;
       const password = loginForm.password.value;
       signInWithEmailAndPassword(auth, email, password)
-        .then((cred) => {
-          console.log("user logged in: ", cred.user);
-          loginAuth();
-        })
+        .then(() => {})
         .catch((err) => {
           console.log(err.message);
         });
@@ -196,38 +211,44 @@ function loginView() {
   }
 }
 
-if (game.app.view === "") {
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      game.app.view = "game";
-      updateView();
-    } else {
-      loginView();
-    }
-  });
-}
-
 function showLeaderboard() {
+  let pointArray = [];
+  let points = 0;
   const users = game.data.users;
-  const sorted = [...users].sort((a, b) => {
+  const scores = game.data.scores;
+
+  for (let i = 0; i < users.length; i++) {
+    for (let j = 0; j < scores.length; j++) {
+      if (users[i].id === scores[j].id) {
+        points = points + scores[j].points;
+      }
+    }
+    let data = {
+      id: users[i].id,
+      name: users[i].username,
+      pts: points,
+    };
+    pointArray.push(data);
+    points = 0;
+  }
+
+  const sorted = [...pointArray].sort((a, b) => {
     return b.score - a.score;
   });
 
   const scoreboard = sorted.map((user) => {
     return /*HTML*/ `
-                    <div class="lb-line">
+    <div class="lb-line">
+    <div class="lb-text">
+    ${user.name}:
+    </div>
                       <div class="lb-text">
-                        ${user.username}:
-                      </div>
-                      <div class="lb-text">
-                        ${user.score}
+                        ${user.pts}
                       </div>
                     </div>`;
   });
   return scoreboard.join("");
 }
-
-// filter players to arrays. reduce pts. map out users.
 
 function userScores() {
   const scores = game.data.scores;
@@ -284,11 +305,6 @@ function createBoard() {
   return gameHtml;
 }
 
-function loginAuth() {
-  game.app.view = "game";
-
-  updateView();
-}
 function logout() {
   game.app.view = "";
   loginView();
@@ -311,7 +327,7 @@ function loginScreen() {
                 <button class="login-btn">Login</button>
                 </form>
                 <div style="width: 10%;"></div>
-                <button class="toSignup login-btn">Sign up?</button>
+                <button type="button" class="toSignup login-btn">Sign up?</button>
               </div>
           </div>
         </div>
@@ -324,23 +340,27 @@ function createUser() {
   let signupHtml = "";
   signupHtml = /*HTML*/ `
   <div class="login-container">
-              <div class="login-card">
+              <div class="login-card" style="height: 35%;">
                 <form class="signup">
                   <div class="user-input">
-                  <label for="email">Enter your email:</label>
-                  <input type="email" name="email"/>
-                    </div>
-                    <div class="user-input">
+                    <label for="usersname">Choose your username:</label>
+                    <input type="text" name="username"/>
+                  </div>
+                  <div class="user-input">
+                    <label for="email">Enter your email:</label>
+                    <input type="email" name="email"/>
+                  </div>
+                  <div class="user-input">
                     <label for="password">Create password:</label>
                     <input type="password" name="password"/>
                   </div>
 
-                    <div class="btn-container">
-                      <button class="login-btn">Sign up</button>
-                      </form>
-                      <div style="width: 10%;"></div>
-                      <button class="cancel login-btn">Cancel</button>
-                    </div>
+                  <div class="btn-container">
+                    <button class="login-btn">Sign up</button>
+                    <div style="width: 10%;"></div>
+                    <button type="button" class="cancel login-btn">Cancel</button>
+                  </div>
+                </form>
               </div>
             </div>
   `;
@@ -369,80 +389,112 @@ function hits() {
 }
 
 function drawResult() {
-  let roundTime = game.input.roundTime;
-  let scores = game.data.scores;
-  let userId = game.app.user;
-  let showScore = "";
+  if (game.input.roundTime.length === 10) {
+    let roundTime = game.input.roundTime;
+    let userId = game.app.user;
+    let showScore = "";
 
-  const sum = roundTime.reduce(function (a, b) {
-    return a + b;
-  }, 0);
-  game.input.roundTime = [];
-  game.input.startTime = 0;
+    const sum = roundTime.reduce(function (a, b) {
+      return a + b;
+    }, 0);
+    game.input.roundTime = [];
+    game.input.startTime = 0;
 
-  const totalTime = sum / 1000;
-  const pts = Math.floor(50 / totalTime);
+    const totalTime = sum / 1000;
+    const pts = Math.floor(50 / totalTime);
 
-  // points: pts,
-  let newScore = {
-    id: userId,
-    points: pts,
-    time: totalTime,
-    date: new Date().toISOString(),
-  };
+    let newScore = {
+      id: userId,
+      points: pts,
+      time: totalTime,
+      date: new Date().toISOString(),
+    };
 
-  addDoc(colRef, newScore); //firebase
+    addDoc(colRef, newScore); //firebase
 
-  scores.push(newScore);
-  let bestTime = scores.filter((item) => item.id == userId);
-  bestTime.sort((a, b) => {
-    if (a.time > b.time) {
-      return 1;
-    }
-    if (b.time > a.time) {
-      return -1;
-    }
-    return 0;
-  });
-  showScore += /*HTML*/ `
+    let scores = game.data.scores;
+    scores.push(newScore);
+    let bestTime = scores.filter((item) => item.id == userId);
+    bestTime.sort((a, b) => {
+      if (a.time > b.time) {
+        return 1;
+      }
+      if (b.time > a.time) {
+        return -1;
+      }
+      return 0;
+    });
+    showScore += /*HTML*/ `
   <div>
   <div>
   Din beste tid er: ${bestTime[0].time}
   </div>
   </div>`;
-  return showScore;
+    return showScore;
+  } else {
+    return "";
+  }
+}
+
+function userPoints() {
+  const scores = game.data.scores;
+  const userRounds = scores.filter((user) => user.id === game.app.user);
+  const userPts = userRounds.reduce(function (a, b) {
+    return a + b.points;
+  }, 0);
+  return userPts;
+}
+
+function userRank() {
+  let pointArray = [];
+  let points = 0;
+  const users = game.data.users;
+  const scores = game.data.scores;
+
+  for (let i = 0; i < users.length; i++) {
+    for (let j = 0; j < scores.length; j++) {
+      if (users[i].id === scores[j].id) {
+        points = points + scores[j].points;
+      }
+    }
+    let data = {
+      id: users[i].id,
+      name: users[i].username,
+      pts: points,
+    };
+    pointArray.push(data);
+    points = 0;
+  }
+
+  const sorted = [...pointArray].sort((a, b) => {
+    return b.score - a.score;
+  });
+  const myUser = game.app.username;
+  for (let i = 0; i < sorted.length; i++) {
+    if (sorted[i].name == myUser) {
+      return i + 1;
+    }
+  }
 }
 
 // signing users up
-if (game.app.view === "signup") {
-  const signupForm = document.querySelector(".signup");
-  signupForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const email = signupForm.email.value;
-    const password = signupForm.password.value;
-    createUserWithEmailAndPassword(auth, email, password)
-      .then((cred) => {
-        console.log("user created: ", cred.user);
-        signupForm.reset();
-        loginAuth();
-      })
-      .catch((err) => {
-        console.log(err.message);
-      });
-  });
-}
 
-function updateProfileName() {
-  const newName = game.input.username;
-  const auth = getAuth();
+function setupUser() {
   const user = auth.currentUser;
-  const displayName = user.displayName;
+  const email = user.email;
+  const idNum = game.data.users.length + 1;
+
   if (user !== null) {
     updateProfile(user, {
-      displayName: newName,
+      displayName: game.input.username,
     })
       .then(() => {
-        alert("username has been changed to: ", displayName);
+        const addUser = {
+          email: email,
+          username: game.input.username,
+          id: idNum,
+        };
+        addDoc(userRef, addUser);
       })
       .catch((err) => {
         console.log(err.message);
