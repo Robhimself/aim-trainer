@@ -100,37 +100,55 @@ function updateView() {
   html.innerHTML += /*HTML*/ `
   <div class="head">
     <div style="display: flex; flex-direction: column; font-weight: bold;">
-    <div>Current Rank: ${rank}.</div>
-    <div>Total Points: ${pts}.</div>
+      <div>Current Rank: ${rank}.</div>
+      <div>Total Points: ${pts}.</div>
     </div>
     <div></div>
     <div>Hello, <b>${nickname}</b> 
-    <button class="logout logout-btn">Log out</button>
+      <button class="logout logout-btn">Log out</button>
     </div>
   </div>
+
   <h1>Are you on the leaderboard yet?</h1>
+
   <div class="main-container">
     <div class="leaderboard">
       <div class="info-text">
       Leaderboard
       </div>
 
-      <div class="lb-container">
-      ${showLeaderboard()}
+      <div class="dbl-container">
+        <div class="lb-left">
+          <div class="info-text">-Most Points-
+            <div title="Earn points by completing rounds. (n / time) - faster = more points!">
+              <svg class="info-icon" fill="#000000" xmlns="http://www.w3.org/2000/svg"  viewBox="0 0 32 32" width="20px" height="20px"><path d="M 16 3 C 8.832031 3 3 8.832031 3 16 C 3 23.167969 8.832031 29 16 29 C 23.167969 29 29 23.167969 29 16 C 29 8.832031 23.167969 3 16 3 Z M 16 5 C 22.085938 5 27 9.914063 27 16 C 27 22.085938 22.085938 27 16 27 C 9.914063 27 5 22.085938 5 16 C 5 9.914063 9.914063 5 16 5 Z M 15 10 L 15 12 L 17 12 L 17 10 Z M 15 14 L 15 22 L 17 22 L 17 14 Z"/></svg>
+            </div>
+          </div>
+          <div class="lb-container">
+            ${showLeaderboard()}
+          </div>
+        </div> 
+        <div class="lb-right">      
+          <div class="info-text">-Top 10 Fastest Rounds-
+          </div>
+          <div class="lb-container">
+            ${fastestTimes()}
+          </div>
+        </div>
       </div>
-  </div>
-  ${`<div class="game">${createBoard()}</div>`}
-  <div class="info">
-  <div class="info-text">
-  One round = 10 hits.
-  </div>
-  <div class="results">
-  ${result}
-  </div>
-  <div class="historic">
-  ${userScores()}
-  </div>
-  </div>
+    </div>
+    ${`<div class="game">${createBoard()}</div>`}
+    <div class="info">
+      <div class="info-text">
+        One round = 10 hits.
+      </div>
+      <div class="results">
+        ${result}
+      </div>
+      <div class="historic">
+        ${userScores()}
+      </div>
+    </div>
   </div>
 `;
 
@@ -154,16 +172,13 @@ function loginView() {
   const view = game.app.view;
   html.innerHTML = "";
   html.innerHTML += /*HTML*/ `
-  <div class="head">
-  </div>
+  <div class="head"></div>
   <h1>Welcome to a simple aim trainer!</h1>
   <div class="main-container">
     <div class="leaderboard"></div>
-  
-  ${view === "signup" ? `${createUser()}` : `${loginScreen()}`}
-  
-  <div class="info">
-  </div>
+    ${view === "signup" ? `${createUser()}` : `${loginScreen()}`}
+    <div class="info">
+    </div>
   </div>
 `;
 
@@ -235,20 +250,52 @@ function showLeaderboard() {
   const sorted = [...pointArray].sort((a, b) => {
     return b.pts - a.pts;
   });
-  console.log(sorted);
 
   const scoreboard = sorted.map((user) => {
     return /*HTML*/ `
     <div class="lb-line">
-    <div class="lb-text">
-    ${user.name}:
-    </div>
-                      <div class="lb-text">
-                        ${user.pts}
-                      </div>
-                    </div>`;
+      <div class="lb-text">
+        ${user.name}:
+      </div>
+      <div class="lb-text">
+        ${user.pts}
+      </div>
+    </div>`;
   });
   return scoreboard.join("");
+}
+
+function fastestTimes() {
+  const users = game.data.users;
+  const scores = game.data.scores;
+  let timeArr = [];
+
+  for (let i = 0; i < users.length; i++) {
+    for (let j = 0; j < scores.length; j++) {
+      if (users[i].id === scores[j].id) {
+        let data = {
+          id: users[i].id,
+          name: users[i].username,
+          time: scores[j].time,
+        };
+        timeArr.push(data);
+      }
+    }
+  }
+
+  const sorted = [...timeArr].sort((a, b) => {
+    return a.time - b.time;
+  });
+  let fastest = "";
+  for (let i = 0; i < 10; i++) {
+    fastest += `
+    <div class="lb-line-fast">
+      <div class="fast-rank">${i + 1}. </div>
+      <div class="lb-text-fast">${sorted[i].name}:</div>
+      <div class="lb-num-fast">${sorted[i].time.toFixed(2)}</div>
+    </div>`;
+  }
+  return fastest;
 }
 
 function userScores() {
@@ -271,7 +318,8 @@ function userScores() {
     <div class="userScore">
       <div class="userScore-text">
         ${list[i].time}s 
-      </div><div class="userScore-text">
+      </div>
+      <div class="userScore-text">
         ${date.toLocaleTimeString("no-NO", {
           hour: "2-digit",
           minute: "2-digit",
@@ -313,26 +361,26 @@ function logout() {
 function loginScreen() {
   let loginHtml = "";
   loginHtml = /*HTML*/ `
-        <div class="login-container">
-          <div class="login-card">
-            <form class="login">
-              <div class="user-input">
-              <label for="email">Email:</label>
-                <input type="email" name="email"/>
-              </div>
-              <div class="user-input">
-              <label for="password">Password:</label>
-                <input type="password" name="password"/>
-              </div>
-              <div class="btn-container">
-                <button class="login-btn">Login</button>
-                </form>
-                <div style="width: 10%;"></div>
-                <button type="button" class="toSignup login-btn">Sign up?</button>
-              </div>
+    <div class="login-container">
+      <div class="login-card">
+        <form class="login">
+          <div class="user-input">
+            <label for="email">Email:</label>
+            <input type="email" name="email"/>
           </div>
-        </div>
-  `;
+          <div class="user-input">
+            <label for="password">Password:</label>
+            <input type="password" name="password"/>
+          </div>
+          <div class="btn-container">
+            <button class="login-btn">Login</button>
+        </form>
+            <div style="width: 10%;"></div>
+            <button type="button" class="toSignup login-btn">Sign up?</button>
+          </div>
+      </div>
+    </div>
+    `;
 
   return loginHtml;
 }
@@ -341,29 +389,29 @@ function createUser() {
   let signupHtml = "";
   signupHtml = /*HTML*/ `
   <div class="login-container">
-              <div class="login-card" style="height: 35%;">
-                <form class="signup">
-                  <div class="user-input">
-                    <label for="usersname">Choose your username:</label>
-                    <input type="text" name="username"/>
-                  </div>
-                  <div class="user-input">
-                    <label for="email">Enter your email:</label>
-                    <input type="email" name="email"/>
-                  </div>
-                  <div class="user-input">
-                    <label for="password">Create password:</label>
-                    <input type="password" name="password"/>
-                  </div>
+    <div class="login-card" style="height: 35%;">
+      <form class="signup">
+        <div class="user-input">
+          <label for="usersname">Choose your username:</label>
+          <input type="text" name="username"/>
+        </div>
+        <div class="user-input">
+          <label for="email">Enter your email:</label>
+          <input type="email" name="email"/>
+        </div>
+        <div class="user-input">
+          <label for="password">Create password:</label>
+          <input type="password" name="password"/>
+        </div>
 
-                  <div class="btn-container">
-                    <button class="login-btn">Sign up</button>
-                    <div style="width: 10%;"></div>
-                    <button type="button" class="cancel login-btn">Cancel</button>
-                  </div>
-                </form>
-              </div>
-            </div>
+        <div class="btn-container">
+          <button class="login-btn">Sign up</button>
+          <div style="width: 10%;"></div>
+          <button type="button" class="cancel login-btn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
   `;
   return signupHtml;
 }

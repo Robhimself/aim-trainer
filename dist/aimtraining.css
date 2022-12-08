@@ -55,7 +55,7 @@ header {
 
 .leaderboard {
   height: auto;
-  width: 12rem;
+  width: 24rem;
   background-color: #8ec3ec;
   border-radius: 20px 0 0 20px;
   padding: 1em;
@@ -78,6 +78,48 @@ header {
 }
 .lb-text {
   font-weight: bolder;
+}
+.lb-line-fast {
+  width: 11rem;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+}
+
+.lb-text-fast {
+  font-weight: bolder;
+  display: flex;
+}
+.lb-num-fast {
+  display: flex;
+  font-weight: bolder;
+  margin-left: auto;
+}
+.fast-rank {
+  font-weight: bolder;
+  width: 2rem;
+}
+
+.dbl-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.lb-left {
+  height: 300px;
+  width: 11rem;
+  display: flex;
+  flex-direction: column;
+}
+.lb-right {
+  height: 300px;
+  width: 11rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.info-icon {
 }
 
 .game {
