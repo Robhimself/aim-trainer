@@ -10,7 +10,6 @@ body {
   user-select: none;
   font-family: monospace;
 }
-
 header {
   height: 10vh;
   display: flex;
@@ -119,9 +118,6 @@ header {
   flex-direction: column;
 }
 
-.info-icon {
-}
-
 .game {
   display: grid;
   grid-template-columns: repeat(5, 150px);
@@ -168,14 +164,6 @@ header {
 }
 .login {
   width: 60%;
-}
-
-.change-name-btn {
-}
-.change-name-modal {
-}
-
-.modal-popup {
 }
 
 .btn-container {
