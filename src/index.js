@@ -233,8 +233,9 @@ function showLeaderboard() {
   }
 
   const sorted = [...pointArray].sort((a, b) => {
-    return b.score - a.score;
+    return b.pts - a.pts;
   });
+  console.log(sorted);
 
   const scoreboard = sorted.map((user) => {
     return /*HTML*/ `
