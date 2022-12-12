@@ -516,7 +516,7 @@ function userRank() {
   }
 
   const sorted = [...pointArray].sort((a, b) => {
-    return b.score - a.score;
+    return b.pts - a.pts;
   });
   const myUser = game.app.username;
   for (let i = 0; i < sorted.length; i++) {
